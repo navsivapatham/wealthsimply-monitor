@@ -1,0 +1,25 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).parent / ".env")
+
+BASE_DIR = Path(__file__).parent
+DB_PATH = BASE_DIR / "monitor.db"
+
+SNAPTRADE_CLIENT_ID = os.getenv("SNAPTRADE_CLIENT_ID")
+SNAPTRADE_CONSUMER_KEY = os.getenv("SNAPTRADE_CONSUMER_KEY")
+SNAPTRADE_USER_ID = os.getenv("SNAPTRADE_USER_ID")
+SNAPTRADE_USER_SECRET = os.getenv("SNAPTRADE_USER_SECRET")
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+DEFAULT_POLL_INTERVAL = 300
+DEFAULT_SMA_PERIOD = 50
+DEFAULT_SMA_THRESHOLD = 5.0
+MARKET_OPEN_HOUR = 9
+MARKET_OPEN_MINUTE = 30
+MARKET_CLOSE_HOUR = 16
+MARKET_CLOSE_MINUTE = 0
+MARKET_TIMEZONE = "US/Eastern"
