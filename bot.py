@@ -122,6 +122,15 @@ def run():
     notifier.send_startup(stock_count, watch_count)
     log.info(f"Monitoring {stock_count} holdings, {watch_count} watchlist items")
 
+    # If the timer fires before market open, wait rather than quitting immediately
+    _et = pytz.timezone(MARKET_TIMEZONE)
+    _now = datetime.now(_et)
+    _open = _now.replace(hour=MARKET_OPEN_HOUR, minute=MARKET_OPEN_MINUTE, second=0, microsecond=0)
+    if _now < _open:
+        _wait = int((_open - _now).total_seconds()) + 2  # +2s buffer: int() truncation woke us ~1s before open, tripping the market-closed check below -> daily premature shutdown (signals dead since 2026-04-24)
+        log.info(f"Pre-market start — waiting {_wait}s until market opens")
+        time.sleep(_wait)
+
     while running:
         if not is_market_open():
             log.info("Market closed — shutting down")

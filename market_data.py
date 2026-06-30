@@ -23,6 +23,9 @@ SYMBOL_MAP = {
     "POL": "POL-USD",
 }
 
+# Tickers with no yfinance data (delisted, unlisted, etc.) — skip silently
+UNRESOLVABLE = frozenset({"POL-USD"})
+
 
 def _yf_ticker(symbol: str) -> str:
     return SYMBOL_MAP.get(symbol, symbol)
@@ -46,8 +49,8 @@ def fetch_current_prices(symbols: list[str]) -> dict[str, float]:
     if not symbols:
         return {}
 
-    yf_tickers = [_yf_ticker(s) for s in symbols]
-    ws_by_yf = {_yf_ticker(s): s for s in symbols}
+    yf_tickers = [_yf_ticker(s) for s in symbols if _yf_ticker(s) not in UNRESOLVABLE]
+    ws_by_yf = {_yf_ticker(s): s for s in symbols if _yf_ticker(s) not in UNRESOLVABLE}
 
     try:
         df = yf.download(yf_tickers, period="1d", group_by="ticker", progress=False, threads=True)
@@ -63,11 +66,13 @@ def fetch_current_prices(symbols: list[str]) -> dict[str, float]:
         yft = yf_tickers[0]
         ws_sym = ws_by_yf[yft]
         try:
-            close = float(df["Close"].iloc[-1])
+            # group_by="ticker" returns MultiIndex columns even for a single ticker in current yfinance
+            series = df[(yft, "Close")] if getattr(df.columns, "nlevels", 1) > 1 else df["Close"]
+            close = float(series.iloc[-1])
             if not math.isnan(close):
                 prices[ws_sym] = close
         except Exception:
-            pass
+            log.warning(f"No batch price for {ws_sym} ({yft})")
     else:
         for yft in yf_tickers:
             ws_sym = ws_by_yf[yft]
@@ -82,6 +87,8 @@ def fetch_current_prices(symbols: list[str]) -> dict[str, float]:
 
 def backfill_history(symbol: str, start_date: str = "2000-01-01") -> int:
     """Fetch all available daily history and store in DB. Returns rows inserted."""
+    if _yf_ticker(symbol) in UNRESOLVABLE:
+        return 0
     log.info(f"Backfilling {symbol} from {start_date}")
     try:
         ticker = yf.Ticker(_yf_ticker(symbol))
